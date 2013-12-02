@@ -71,6 +71,7 @@ namespace AppWarp
 		if(_instance != NULL){
 			delete Client::_instance->http;
 			delete Client::_instance;
+			Client::_instance = NULL;
 		}
 	}
 

@@ -1,0 +1,33 @@
+option lib
+
+subproject 
+{
+	appwarp
+	iwhttp
+}
+
+files
+{
+	(appwarp)
+	listener.h
+	appwarp.h
+	base64.h
+	cJSON.h
+	SHA1.h
+	HMAC_SHA1.h
+	urlencode.h
+	defines.h
+	socket.h
+	utilities.h
+	requests.h
+	base64.cpp
+	cJSON.c
+	SHA1.cpp
+	HMAC_SHA1.cpp
+	urlencode.cpp
+	socket.cpp
+	utilities.cpp
+	requests.cpp
+	appwarp_extended.cpp
+	appwarp.cpp
+}

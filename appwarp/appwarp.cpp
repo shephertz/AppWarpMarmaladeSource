@@ -287,7 +287,8 @@ namespace AppWarp
     void Client::unscheduleKeepAlive()
     {
         //this->unschedule(schedule_selector(Client::sendKeepAlive));
-		s3eTimerCancelTimer(&sendKeepAlive, this);
+		if(_state != ConnectionState::disconnected)
+			s3eTimerCancelTimer(&sendKeepAlive, this);
     }
     
     int32 Client::sendKeepAlive(void *sys, void *usr)

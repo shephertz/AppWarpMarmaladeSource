@@ -32,7 +32,7 @@
 namespace AppWarp
 {
 
-		byte* buildWarpRequest(int requestType, std::string payload, int &byteLen)
+		byte* buildWarpRequest(int requestType, std::string payload, int &byteLen, byte reserved)
 		{
 
 			byteLen = 16 + payload.length();
@@ -54,7 +54,7 @@ namespace AppWarp
 				byteArray[i] = 0;
 
 			//byte 10 : reserved
-			byteArray[10] = 0;
+			byteArray[10] = reserved;//0;
 
 			//byte 11 : payload type String, Binary, JSON
 			if(payload.length() > 0 && requestType != RequestType::update_peers)
@@ -76,7 +76,7 @@ namespace AppWarp
 			return byteArray;
 		}
 
-		byte* buildWarpRequest(int requestType, byte *payload, int payload_len, int &byteLen)
+		byte* buildWarpRequest(int requestType, byte *payload, int payload_len, int &byteLen, byte reserved)
 		{
 
 			byteLen = 16 + payload_len;
@@ -98,7 +98,7 @@ namespace AppWarp
 				byteArray[i] = 0;
 
 			//byte 10 : reserved
-			byteArray[10] = 0;
+			byteArray[10] = reserved;//0;
 
 			//byte 11 : payload type String, Binary, JSON
 			if(payload_len > 0 && requestType != RequestType::update_peers)
@@ -130,7 +130,7 @@ namespace AppWarp
 			params.append(timeStamp);
 			params.append("user");
 			params.append(username);
-			params.append("version1.4");
+			params.append("version1.5");
 
 			unsigned char hmac_digest[20];
 			memset(hmac_digest, 0, 20);
@@ -141,7 +141,7 @@ namespace AppWarp
 			cJSON *payloadJSON;
 			payloadJSON = cJSON_CreateObject();
 			cJSON_AddStringToObject(payloadJSON,"apiKey", APIKEY.c_str());
-			cJSON_AddStringToObject(payloadJSON,"version", "1.4");
+			cJSON_AddStringToObject(payloadJSON,"version", "1.5");
 			cJSON_AddStringToObject(payloadJSON,"timeStamp", timeStamp.c_str());
 			cJSON_AddStringToObject(payloadJSON,"user", username.c_str());
 			cJSON_AddStringToObject(payloadJSON,"signature", hmac.c_str());

@@ -22,22 +22,40 @@
  SOFTWARE.
  */
 
-#ifndef __REQUEST_H__
-#define __REQUEST_H__
+#ifndef __APPWARP_UDPSOCKET__
+#define __APPWARP_UDPSOCKET__
+
+#include <iostream>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 namespace AppWarp
 {
-		byte* buildWarpRequest(int, std::string, int &, byte = 0);
-		byte* buildWarpRequest(int , byte *, int , int &, byte = 0);
-		byte* buildAuthRequest(std::string, int &,std::string, std::string);
-		byte* buildLobbyRequest(int,int &);
-		byte *buildRoomRequest(int,std::string,int &);
-		byte *buildCreateRoomRequest(std::string,std::string,int,int &);
-		byte *buildCreateRoomRequest(std::string,std::string,int,std::string,int &);
-		byte *buildCreateRoomRequest(std::string,std::string,int,std::string,int,int &);
-        byte *buildKeepAliveRequest(int requestType, int &len);
-		response *buildResponse(char *, int);
-		notify *buildNotify(char *, int);
+    class Client;
+	namespace Utility
+	{
+		class UdpSocket
+		{
+			int sockd;
+            struct sockaddr_in serv_name;
+            Client* _callBack;
+            
+		public:
+			UdpSocket(Client* owner);
+			~UdpSocket();
+            int connect(std::string host, short port);
+            void disconnect();
+			int sockSend(char *,int);
+			void checkMessages();
+		};
+        
+	}
 }
 
 #endif

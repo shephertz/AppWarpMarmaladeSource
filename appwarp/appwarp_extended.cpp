@@ -221,7 +221,7 @@ namespace AppWarp
                     byte *update = new byte[res->payLoadSize];
                     for(int i=0; i<res->payLoadSize; ++i)
                         update[i] = res->payLoad[i];
-                    _notificationListener->onUpdatePeersReceived(update, res->payLoadSize);
+                    _notificationListener->onUpdatePeersReceived(update, res->payLoadSize, false);
                     
                     delete[] update;
                 }

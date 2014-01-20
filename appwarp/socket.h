@@ -34,8 +34,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
-
 namespace AppWarp
 {
     class Client;

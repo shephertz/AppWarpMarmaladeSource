@@ -30,4 +30,6 @@ files
 	requests.cpp
 	appwarp_extended.cpp
 	appwarp.cpp
+	udpsocket.h
+	udpsocket.cpp
 }

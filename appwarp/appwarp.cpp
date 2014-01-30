@@ -503,7 +503,7 @@ namespace AppWarp
             }
             
 		}
-        delete bufferToDecode;
+        delete[] bufferToDecode;
 	}
     
     bool Client::canDecode(char data[],int start, int end)
@@ -1282,7 +1282,8 @@ namespace AppWarp
 			cJSON_AddStringToObject(propJSON, it->first.c_str(),it->second.c_str());
 		}
         
-		cJSON_AddStringToObject(payloadJSON, "lockProperties", cJSON_PrintUnformatted(propJSON));
+		char *tmp = cJSON_PrintUnformatted(propJSON);
+		cJSON_AddStringToObject(payloadJSON, "lockProperties", tmp);
         
 		char *cRet = cJSON_PrintUnformatted(payloadJSON);
 		payload = cRet;
@@ -1302,6 +1303,7 @@ namespace AppWarp
 		cJSON_Delete(propJSON);
 		cJSON_Delete(payloadJSON);
 		free(cRet);
+		free(tmp);
     }
     
     void Client::unlockProperties(std::vector<std::string> properties)
@@ -1381,7 +1383,6 @@ namespace AppWarp
 		cJSON_AddStringToObject(payloadJSON, "id", roomID.c_str());
 		char* tmp = cJSON_PrintUnformatted(propJSON);
 		cJSON_AddStringToObject(payloadJSON, "addOrUpdate", tmp);
-		free(tmp);
 
 		std::string removeArrayStr = "";
 		for(unsigned int i=0; i<removeArray.size(); ++i)
@@ -1412,6 +1413,7 @@ namespace AppWarp
 		cJSON_Delete(propJSON);
 		cJSON_Delete(payloadJSON);
 		free(cRet);
+		free(tmp);
 	}
     
     void Client::getRoomsInUserRange(int minJoinedUsers, int maxJoinedUsers)
@@ -1518,7 +1520,8 @@ namespace AppWarp
 		{
 			cJSON_AddStringToObject(propJSON, it->first.c_str(),it->second.c_str());
 		}
-		cJSON_AddStringToObject(payloadJSON, "properties", cJSON_PrintUnformatted(propJSON));
+		char *tmp = cJSON_PrintUnformatted(propJSON);
+		cJSON_AddStringToObject(payloadJSON, "properties", tmp);
 
 		char *cRet = cJSON_PrintUnformatted(payloadJSON);
 		payload = cRet;
@@ -1538,6 +1541,7 @@ namespace AppWarp
 		cJSON_Delete(propJSON);
 		cJSON_Delete(payloadJSON);
 		free(cRet);
+		free(tmp);
 	}
 
 	void Client::getRoomWithProperties(std::map<std::string,std::string> properties)

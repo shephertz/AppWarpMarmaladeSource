@@ -56,6 +56,7 @@ namespace AppWarp
 		_udpsocket = NULL;
 		userName = "";
 		APPWARPSERVERHOST = "";
+		GEOLOCATION = "";
         _state = ConnectionState::disconnected;
 		_socketState = SocketStream::stream_connecting;
 	}
@@ -90,6 +91,12 @@ namespace AppWarp
         _instance->keepAliveWatchDog = false;
 		
 		_instance->http = new CIwHTTP;
+	}
+
+	void Client::setGeoLocation(std::string location)
+	{
+		GEOLOCATION = location;
+		APPWARPSERVERHOST = "";
 	}
 
 	Client* Client::getInstance()
@@ -262,6 +269,12 @@ namespace AppWarp
         std::string path = LOOKUPHOST;
         path.append("?api=");
         path.append(this->APIKEY);
+
+		if(GEOLOCATION.length() > 0)
+		{
+			path.append("&geo=");
+			path.append(this->GEOLOCATION);
+		}
  
 		s3eResult res = http->Get(path.c_str(), &GotHeaders, this);
     }

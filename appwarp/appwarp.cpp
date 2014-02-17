@@ -396,6 +396,8 @@ namespace AppWarp
             {
                 _state = ConnectionState::disconnected;
                 AppWarpSessionID = 0;
+				delete _socket;
+				_socket = NULL;
                 if(_connectionReqListener != NULL)
                 {
                     _connectionReqListener->onDisconnectDone(ResultCode::success);
@@ -550,13 +552,13 @@ namespace AppWarp
 
 	void Client::disconnect()
 	{
-        if((_socket == NULL) || (_socket->sockDisconnect() == AppWarp::result_failure))
+        if(_socket == NULL)
         {
             if(_connectionReqListener != NULL)
                 _connectionReqListener->onDisconnectDone(AppWarp::ResultCode::bad_request);
             return;
         }
-        keepAliveWatchDog = false;
+        /*keepAliveWatchDog = false;
         this->unscheduleKeepAlive();
         delete _socket;
         _socket = NULL;
@@ -565,7 +567,28 @@ namespace AppWarp
         AppWarpSessionID = 0;
         
 		if(_connectionReqListener != NULL)
-			_connectionReqListener->onDisconnectDone(AppWarp::ResultCode::success);
+			_connectionReqListener->onDisconnectDone(AppWarp::ResultCode::success);*/
+		byte *req;
+		int byteLen;
+		req = buildWarpRequest(RequestType::signout, "", byteLen);
+
+		char *data = new char[byteLen];
+		for(int i=0; i< byteLen; ++i)
+		{
+			data[i] = req[i];
+		}
+
+		_socket->sockSend(data, byteLen);
+
+		delete[] data;
+		delete[] req;
+
+		_state = ConnectionState::disconnecting;
+		if(_socket->sockDisconnect() == AppWarp::result_failure)
+		{
+			if(_connectionReqListener != NULL)
+                _connectionReqListener->onDisconnectDone(AppWarp::ResultCode::bad_request);
+		}
 	}
 
     void Client::initUDP()

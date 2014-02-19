@@ -1605,7 +1605,8 @@ namespace AppWarp
 		{
 			cJSON_AddStringToObject(propJSON, it->first.c_str(),it->second.c_str());
 		}
-		cJSON_AddItemToObject(payloadJSON, "properties", propJSON);
+		char *tmp = cJSON_PrintUnformatted(propJSON);
+		cJSON_AddStringToObject(payloadJSON, "properties", tmp);
 
 		char *cRet = cJSON_PrintUnformatted(payloadJSON);
 		payload = cRet;
@@ -1625,6 +1626,7 @@ namespace AppWarp
 		cJSON_Delete(propJSON);
 		cJSON_Delete(payloadJSON);
 		free(cRet);
+		free(tmp);
 	}
 
 	void Client::startGame()

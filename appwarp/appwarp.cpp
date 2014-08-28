@@ -152,10 +152,10 @@ namespace AppWarp
     void Client::recoverConnection()
     {
         
-        if (AppWarpSessionID==0 || userName.length() == 0 || _socket!=NULL || _state!=ConnectionState::disconnected || APPWARPSERVERHOST.length() <= 0)
+        if (AppWarpSessionID==0 || userName.length() == 0 || _socket!=NULL || _state!=ConnectionState::disconnected)
         {
 			if(_connectionReqListener != NULL)
-				_connectionReqListener->onConnectDone(ResultCode::bad_request);
+				_connectionReqListener->onConnectDone(ResultCode::bad_request, 0);
             return;
 		}
         
@@ -205,7 +205,7 @@ namespace AppWarp
 		if(user.length() == 0 || _socket!=NULL || _state!=ConnectionState::disconnected)
 		{
 			if(_connectionReqListener != NULL)
-				_connectionReqListener->onConnectDone(ResultCode::bad_request);
+				_connectionReqListener->onConnectDone(ResultCode::bad_request, 0);
             return;
 		}
         userName = user;
@@ -238,7 +238,7 @@ namespace AppWarp
 						if(key.compare("error_reason") == 0)
 						{
 							if(client->_connectionReqListener != NULL)
-								client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::api_not_found);
+								client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::api_not_found, 0);
 
 							return 0;
 						}
@@ -258,7 +258,7 @@ namespace AppWarp
 		else
 		{
 			if(client->_connectionReqListener != NULL)
-					client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::connection_error);
+					client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::connection_error, 0);
 		}
 
 		return 0;
@@ -411,7 +411,7 @@ namespace AppWarp
                 {
                     if(_connectionReqListener != NULL)
                     {
-                        _connectionReqListener->onConnectDone(ResultCode::connection_error_recoverable);
+                        _connectionReqListener->onConnectDone(ResultCode::connection_error_recoverable, 0);
                     }
                 }
                 else
@@ -419,7 +419,7 @@ namespace AppWarp
                     AppWarpSessionID = 0;
                     if(_connectionReqListener != NULL)
                     {
-                        _connectionReqListener->onConnectDone(ResultCode::connection_error);
+                        _connectionReqListener->onConnectDone(ResultCode::connection_error, 0);
                     }
                 }
             }
@@ -1720,4 +1720,17 @@ namespace AppWarp
 		cJSON_Delete(payloadJSON);
 		free(cRet);
     }
+
+	int Client::getSessionID()
+	{
+		return AppWarpSessionID;
+	}
+
+	void Client::recoverConnectionWithSessionID(int session_id, std::string user_name)
+	{
+		AppWarpSessionID = session_id;
+		userName = user_name;
+
+		recoverConnection();
+	}
 }

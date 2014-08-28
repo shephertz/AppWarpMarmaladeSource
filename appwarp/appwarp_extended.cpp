@@ -334,6 +334,7 @@ namespace AppWarp
 
 		void Client::handleAuthResponse(response *res)
 		{
+			int reasonCode = 0;
 			if(res->resultCode == ResultCode::success)
 			{
 				char *str = new char[res->payLoadSize];
@@ -354,6 +355,17 @@ namespace AppWarp
 			}
             else
             {
+				if (res->resultCode == ResultCode::auth_error && res->payLoadType == PayLoadType::json)
+				{
+					char *str = new char[res->payLoadSize];
+					for (int i = 0; i < res->payLoadSize; ++i)
+					{
+						str[i] = (char)res->payLoad[i];
+					}
+					reasonCode = getJSONInt("reasonCode", res->payLoad, res->payLoadSize);
+					delete[] str;
+				}
+
                 keepAliveWatchDog = false;
                 unscheduleKeepAlive();
                 _state = ConnectionState::disconnected;
@@ -361,7 +373,7 @@ namespace AppWarp
                 _socket = NULL;
             }
 			if(_connectionReqListener != NULL)
-				_connectionReqListener->onConnectDone(res->resultCode);
+				_connectionReqListener->onConnectDone(res->resultCode, reasonCode);
 		}
 
 		void Client::handleLobbyResponse(int reqType,response *res)

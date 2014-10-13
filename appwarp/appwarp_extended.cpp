@@ -124,6 +124,11 @@ namespace AppWarp
 				if(_updatelistener != NULL)
 					_updatelistener->onSendUpdateDone(res->resultCode);
 			}
+			else if (res->requestType == RequestType::private_update)
+			{
+				if (_updatelistener != NULL)
+					_updatelistener->onSendPrivateUpdateDone(res->resultCode);
+			}
             else if(res->requestType == RequestType::lock_properties)
 			{
 				if(_roomlistener != NULL)
@@ -140,6 +145,8 @@ namespace AppWarp
                 _turnlistener->onStopGameDone(res->resultCode);
             else if(res->requestType == RequestType::move && _turnlistener!=NULL)
                 _turnlistener->onSendMoveDone(res->resultCode);
+			else if (res->requestType == RequestType::set_next_turn && _turnlistener != NULL)
+				_turnlistener->onSetNextTurnDone(res->resultCode);
             else if(res->requestType == RequestType::get_move_history && _turnlistener!=NULL)
             {
                 vector<move> history;
@@ -225,6 +232,26 @@ namespace AppWarp
                     
                     delete[] update;
                 }
+				else if (res->updateType == UpdateType::private_update)
+				{
+					byte *msg = new byte[res->payLoadSize];
+					for (int i = 0; i<res->payLoadSize; ++i)
+						msg[i] = res->payLoad[i];
+					
+					byte fromUserLen = msg[0];
+					char *fromUser = new char[fromUserLen+1];
+					int updateLen = res->payLoadSize - fromUserLen - 1;
+					byte *update = new byte[updateLen];
+					memcpy(fromUser, msg + 1, fromUserLen);
+					fromUser[fromUserLen] = '\0';
+					memcpy(update, msg + fromUserLen + 1, updateLen);
+					
+					_notificationListener->onPrivateUpdateReceived(std::string(fromUser), update, updateLen, false);
+					
+					delete[] fromUser;
+					delete[] msg;
+					delete[] update;	
+				}
                 else if(res->updateType == UpdateType::room_created)
                 {
                     room rm;
@@ -269,6 +296,11 @@ namespace AppWarp
                     move event = buildMoveEvent(res->payLoad, res->payLoadSize);
                     _notificationListener->onMoveCompleted(event);
                 }
+				else if (res->updateType == UpdateType::next_turn_requested && _notificationListener != NULL)
+				{
+					std::string lastTurn = getJSONString("lastTurn", res->payLoad, res->payLoadSize);
+					_notificationListener->onNextTurnRequest(lastTurn);
+				}
                 else if(res->updateType == UpdateType::user_paused)
                 {
                     std::string user = getJSONString("user",res->payLoad,res->payLoadSize);

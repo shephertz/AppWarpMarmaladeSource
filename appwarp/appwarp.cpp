@@ -238,7 +238,7 @@ namespace AppWarp
 						if(key.compare("error_reason") == 0)
 						{
 							if(client->_connectionReqListener != NULL)
-								client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::api_not_found, 0);
+								client->_connectionReqListener->onConnectDone(AppWarp::ResultCode::auth_error, ReasonCode::invalid_api_key);
 
 							return 0;
 						}
@@ -432,10 +432,31 @@ namespace AppWarp
 
     void Client::udpnotify(notify *notification)
     {
-        if((notification->updateType != UpdateType::update_peers) || (_notificationListener == NULL)){
-            return;
-        }
-        _notificationListener->onUpdatePeersReceived(notification->payLoad, notification->payLoadSize, true);
+		if (_notificationListener != NULL)
+		{
+			if (notification->updateType == UpdateType::update_peers){
+				_notificationListener->onUpdatePeersReceived(notification->payLoad, notification->payLoadSize, true);
+			}
+			else if (notification->updateType == UpdateType::private_update)
+			{
+				byte *msg = new byte[notification->payLoadSize];
+				for (int i = 0; i<notification->payLoadSize; ++i)
+					msg[i] = notification->payLoad[i];
+				
+				byte fromUserLen = msg[0];
+				char *fromUser = new char[fromUserLen];
+				int updateLen = notification->payLoadSize - fromUserLen - 1;
+				byte *update = new byte[updateLen];
+				memcpy(fromUser, msg + 1, fromUserLen);
+				memcpy(update, msg + fromUserLen + 1, updateLen);
+				
+				_notificationListener->onPrivateUpdateReceived(std::string(fromUser), update, updateLen, true);
+				
+				delete[] fromUser;
+				delete[] msg;
+				delete[] update;
+			}
+		}
     }
     
     void Client::udpresponse(response* res)
@@ -1166,6 +1187,63 @@ namespace AppWarp
 		delete[] req;
     }
 
+	void Client::sendPrivateUpdate(std::string toUser, byte *update, int updateLen)
+	{
+		if ((_state != ConnectionState::connected) || (_socket == NULL)){
+			if (_updatelistener != NULL)
+			{
+				_updatelistener->onSendPrivateUpdateDone(ResultCode::connection_error);
+			}
+			return;
+		}
+		if (updateLen >= 1000)
+		{
+			if (_updatelistener != NULL)
+				_updatelistener->onSendPrivateUpdateDone(ResultCode::bad_request);
+				return;
+		}
+	
+		byte userNameLen = (byte)toUser.length();
+		int msgLen = userNameLen + updateLen + 1;
+		byte *msg = new byte[msgLen];
+		
+		msg[0] = userNameLen;
+		memcpy(msg + 1, toUser.c_str(), userNameLen);
+		memcpy(msg + 1 + userNameLen, update, updateLen);
+		
+		int len;
+		byte * req = buildWarpRequest(RequestType::private_update, msg, msgLen, len);
+		
+		_socket->sockSend((char*)req, len);
+		
+		delete[] req;
+		delete[] msg;
+	}
+	
+	void Client::sendPrivateUdpUpdate(std::string toUser, byte *update, int updateLen)
+	{
+		if ((_state != ConnectionState::connected) || (updateLen >= 1000) || (_udpsocket == NULL))
+		{
+			return;
+		}
+		
+		byte userNameLen = (byte)toUser.length();
+		int msgLen = userNameLen + updateLen + 1;
+		byte *msg = new byte[msgLen];
+		
+		msg[0] = userNameLen;
+		memcpy(msg + 1, toUser.c_str(), userNameLen);
+		memcpy(msg + 1 + userNameLen, update, updateLen);
+		
+		int len;
+		byte * req = buildWarpRequest(RequestType::private_update, msg, msgLen, len, 2);
+		
+		_udpsocket->sockSend((char*)req, len);
+		
+		delete[] req;
+		delete[] msg;
+	}
+
 	void Client::setCustomUserData(std::string userName, std::string customData)
 	{
         if((_state != ConnectionState::connected) || (_socket == NULL)){
@@ -1629,7 +1707,7 @@ namespace AppWarp
 		free(tmp);
 	}
 
-	void Client::startGame()
+	void Client::startGame(bool isDefaultLogic, std::string firstTurn)
     {
         if((_state != ConnectionState::connected) || (_socket == NULL)){
             if(_turnlistener != NULL)
@@ -1638,12 +1716,28 @@ namespace AppWarp
 			}
             return;
         }
-		int len;
-		byte * req = buildWarpRequest(RequestType::start_game, NULL, 0, len);
-        
-		_socket->sockSend((char*)req, len);
-
+		
+		int byteLen;
+		byte *req;
+		
+		std::string payload;
+		cJSON *payloadJSON;
+		payloadJSON = cJSON_CreateObject();
+		if (isDefaultLogic == true)
+			cJSON_AddTrueToObject(payloadJSON, "isDefaultLogic");
+		else
+			cJSON_AddFalseToObject(payloadJSON, "isDefaultLogic");
+		cJSON_AddStringToObject(payloadJSON, "nextTurn", firstTurn.c_str());
+		char *cRet = cJSON_PrintUnformatted(payloadJSON);
+		payload = cRet;
+		
+		req = buildWarpRequest(RequestType::start_game, payload, byteLen);
+		
+		_socket->sockSend((char*)req, byteLen);
+		
 		delete[] req;
+		cJSON_Delete(payloadJSON);
+		free(cRet);
     }
     
     void Client::stopGame()
@@ -1692,7 +1786,7 @@ namespace AppWarp
 		free(cRet);
     }
     
-    void Client::sendMove(std::string moveData)
+	void Client::sendMove(std::string moveData, std::string nextTurn)
     {
         if((_state != ConnectionState::connected) || (_socket == NULL)){
             if(_turnlistener != NULL)
@@ -1709,6 +1803,7 @@ namespace AppWarp
 		cJSON *payloadJSON;
 		payloadJSON = cJSON_CreateObject();
 		cJSON_AddStringToObject(payloadJSON, "moveData", moveData.c_str());
+		cJSON_AddStringToObject(payloadJSON, "nextTurn", nextTurn.c_str());
 		char *cRet =  cJSON_PrintUnformatted(payloadJSON);
 		payload = cRet;
         
@@ -1720,6 +1815,36 @@ namespace AppWarp
 		cJSON_Delete(payloadJSON);
 		free(cRet);
     }
+
+	void Client::setNextTurn(std::string nextTurn)
+	{
+		if ((_state != ConnectionState::connected) || (_socket == NULL)){
+			if (_turnlistener != NULL)
+			{
+				_turnlistener->onSetNextTurnDone(ResultCode::connection_error);
+			}
+			return;
+		}
+
+		int byteLen;
+		byte *req;
+		
+		std::string payload;
+		cJSON *payloadJSON;
+		payloadJSON = cJSON_CreateObject();
+		cJSON_AddStringToObject(payloadJSON, "nextTurn", nextTurn.c_str());
+		char *cRet = cJSON_PrintUnformatted(payloadJSON);
+		payload = cRet;
+		
+		req = buildWarpRequest(RequestType::set_next_turn, payload, byteLen);
+		
+		_socket->sockSend((char*)req, byteLen);
+		
+		delete[] req;
+		cJSON_Delete(payloadJSON);
+		free(cRet);
+	}
+
 
 	int Client::getSessionID()
 	{
